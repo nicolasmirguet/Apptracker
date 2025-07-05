@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Funding Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Modern font and base styling */
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Healthcare color palette */
+        :root {
+            --primary-50: #eff6ff;
+            --primary-100: #dbeafe;
+            --primary-500: #3b82f6;
+            --primary-600: #2563eb;
+            --primary-700: #1d4ed8;
+            --primary-800: #1e40af;
+            
+            --success-50: #ecfdf5;
+            --success-100: #d1fae5;
+            --success-500: #10b981;
+            --success-600: #059669;
+            --success-700: #047857;
+            
+            --warning-50: #fffbeb;
+            --warning-100: #fef3c7;
+            --warning-500: #f59e0b;
+            --warning-600: #d97706;
+            
+            --error-50: #fef2f2;
+            --error-100: #fee2e2;
+            --error-500: #ef4444;
+            --error-600: #dc2626;
+            
+            --neutral-50: #f8fafc;
+            --neutral-100: #f1f5f9;
+            --neutral-200: #e2e8f0;
+            --neutral-300: #cbd5e1;
+            --neutral-400: #94a3b8;
+            --neutral-500: #64748b;
+            --neutral-600: #475569;
+            --neutral-700: #334155;
+            --neutral-800: #1e293b;
+            --neutral-900: #0f172a;
+        }
+        
+        /* Body styling */
+        body {
+            background: linear-gradient(135deg, var(--neutral-50) 0%, var(--primary-50) 100%);
+            color: var(--neutral-800);
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        
+        /* Button styling with micro-interactions */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(-1px) scale(0.98);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Card styling */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(203, 213, 225, 0.3);
+            box-shadow: 0 4px 6px rgba(15, 23, 42, 0.07);
+        }
+        
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
+        }
+        
+        /* Input styling with focus effects */
+        input, select {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-color: var(--neutral-300);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        input:focus, select:focus {
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
+        }
+        
+        /* Status styling */
+        .status-healthy {
+            background: var(--success-50);
+            color: var(--success-700);
+            border: 1px solid var(--success-200);
+        }
+        
+        .status-warning {
+            background: var(--warning-50);
+            color: var(--warning-700);
+            border: 1px solid var(--warning-200);
+        }
+        
+        .status-critical {
+            background: var(--error-50);
+            color: var(--error-700);
+            border: 1px solid var(--error-200);
+        }
+        
+        /* Tab styling */
+        .tab-active {
+            background: linear-gradient(135deg, var(--primary-100) 0%, var(--primary-50) 100%);
+            color: var(--primary-700);
+            border: 1px solid var(--primary-200);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        
+        .tab-inactive {
+            color: var(--neutral-500);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        
+        .tab-inactive:hover {
+            color: var(--neutral-700);
+            background: linear-gradient(135deg, var(--neutral-100) 0%, var(--neutral-50) 100%);
+            transform: translateY(-1px);
+            border: 1px solid var(--neutral-200);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        /* Typography improvements */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--neutral-900);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // Icons (simplified for standalone version)
+        const Plus = () => <span>+</span>;
+        const Edit2 = () => <span>✏️</span>;
+        const AlertTriangle = () => <span>⚠️</span>;
+        const DollarSign = () => <span>💰</span>;
+        const Clock = () => <span>⏰</span>;
+        const Users = () => <span>👥</span>;
+        const X = () => <span>❌</span>;
+        const Check = () => <span>✅</span>;
+        const Settings = () => <span>⚙️</span>;
+        const Building2 = () => <span>🏢</span>;
+
+        // Constants
+        const CONSTANTS = {
+            DEFAULT_HOURLY_RATE: 222.99,
+            LOW_FUNDS_THRESHOLD_HOURS: 5,
+            PLAN_ENDING_SOON_DAYS: 30,
+            MAX_REASONABLE_WEEKLY_HOURS: 40,
+            NOTIFICATION_DURATION: 5000
+        };
+
+        // Custom Hooks
+        const useNotification = () => {
+            const [notification, setNotification] = useState(null);
+
+            const showNotification = useCallback((message, type = 'success') => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), CONSTANTS.NOTIFICATION_DURATION);
+            }, []);
+
+            const hideNotification = useCallback(() => {
+                setNotification(null);
+            }, []);
+
+            return { notification, showNotification, hideNotification };
+        };
+
+        const useClientMetrics = (clients) => {
+            return useMemo(() => {
+                const calculateClientMetrics = (client) => {
+                    // Calculate how much money has been spent from hours worked
+                    const amountSpent = (client.hoursWorkedToDate || 0) * (client.hourlyRate || 0);
+                    const actualRemainingAmount = Math.max(0, (client.amountRemaining || 0) - amountSpent);
+                    
+                    const remainingHours = actualRemainingAmount > 0 ? actualRemainingAmount / (client.hourlyRate || 1) : 0;
+                    const isLowFunds = actualRemainingAmount < ((client.hourlyRate || 0) * CONSTANTS.LOW_FUNDS_THRESHOLD_HOURS);
+                    
+                    let weeklyHoursNeeded = 0;
+                    let weeksRemaining = 0;
+                    let isPlanEndingSoon = false;
+                    let isPlanPastDue = false;
+                    let isWeeklyHoursTooHigh = false;
+                    let totalProjectHours = 0;
+                    let progressPercentage = 0;
+                    
+                    if (client.planEndDate) {
+                        const today = new Date();
+                        const planEndDate = new Date(client.planEndDate);
+                        const timeDiff = planEndDate.getTime() - today.getTime();
+                        const daysDiff = timeDiff / (1000 * 3600 * 24);
+                        
+                        weeksRemaining = Math.max(0, daysDiff / 7);
+                        isPlanEndingSoon = daysDiff > 0 && daysDiff <= CONSTANTS.PLAN_ENDING_SOON_DAYS;
+                        isPlanPastDue = daysDiff < 0;
+                        
+                        if (weeksRemaining > 0 && remainingHours > 0) {
+                            weeklyHoursNeeded = remainingHours / weeksRemaining;
+                            isWeeklyHoursTooHigh = weeklyHoursNeeded > CONSTANTS.MAX_REASONABLE_WEEKLY_HOURS;
+                        }
+                    }
+                    
+                    // Calculate total project hours and progress
+                    totalProjectHours = ((client.amountRemaining || 0) / (client.hourlyRate || 1)) + (client.hoursWorkedToDate || 0);
+                    if (totalProjectHours > 0) {
+                        progressPercentage = ((client.hoursWorkedToDate || 0) / totalProjectHours) * 100;
+                    }
+                    
+                    return {
+                        ...client,
+                        actualRemainingAmount,
+                        amountSpent,
+                        remainingHours: Math.max(0, remainingHours),
+                        weeklyHoursNeeded,
+                        weeksRemaining,
+                        totalProjectHours,
+                        progressPercentage,
+                        lowFundsAlert: isLowFunds,
+                        planEndAlert: isPlanEndingSoon,
+                        planPastDueAlert: isPlanPastDue,
+                        weeklyHoursTooHighAlert: isWeeklyHoursTooHigh
+                    };
+                };
+
+                return clients.map(calculateClientMetrics);
+            }, [clients]);
+        };
+
+        // Components
+        const Notification = ({ notification, onClose }) => {
+            if (!notification) return null;
+
+            return (
+                <div className={`fixed top-6 right-6 p-4 rounded-xl shadow-2xl z-50 fade-in-up ${
+                    notification.type === 'error' 
+                        ? 'status-critical' 
+                        : 'status-healthy'
+                } backdrop-blur-sm`}>
+                    <div className="flex items-center">
+                        {notification.type === 'error' ? (
+                            <div className="text-red-600 text-xl mr-3"><X /></div>
+                        ) : (
+                            <div className="text-green-600 text-xl mr-3"><Check /></div>
+                        )}
+                        <span className="font-medium">{notification.message}</span>
+                        <button 
+                            onClick={onClose}
+                            className="ml-4 text-neutral-400 hover:text-neutral-600 transition-all duration-200 hover:scale-110"
+                        >
+                            <X />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const StatCard = ({ icon: Icon, title, value, color, subtitle }) => (
+            <div className="card card-hover rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-neutral-600 mb-2">{title}</p>
+                        <p className={`text-3xl font-bold ${color} mb-1`}>{value}</p>
+                        {subtitle && <p className="text-xs text-neutral-500 leading-relaxed">{subtitle}</p>}
+                    </div>
+                    <div className={`text-4xl ${color} opacity-80 transition-all duration-300 hover:scale-110 hover:opacity-100`}><Icon /></div>
+                </div>
+            </div>
+        );
+
+        // Setup Alert Component
+        const SetupAlert = ({ alerts, onDismiss, onQuickSetup }) => {
+            if (!alerts || alerts.length === 0) return null;
+
+            const mainAlert = alerts[0];
+
+            return (
+                <div className="card rounded-2xl p-6 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 fade-in-up">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <div className="flex items-center mb-3">
+                                <span className="text-2xl mr-3">👋</span>
+                                <h3 className="text-lg font-bold">{mainAlert.title}</h3>
+                            </div>
+                            <p className="text-sm font-medium mb-4 leading-relaxed">
+                                {mainAlert.message}
+                            </p>
+                            <div className="flex flex-wrap gap-3">
+                                <button
+                                    onClick={mainAlert.actionFn}
+                                    className="btn-primary px-6 py-2 rounded-lg text-sm font-medium"
+                                >
+                                    {mainAlert.action}
+                                </button>
+                                <button
+                                    onClick={onQuickSetup}
+                                    className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 transition-all duration-200"
+                                >
+                                    🚀 Quick Setup with Sample Data
+                                </button>
+                                <button
+                                    onClick={() => onDismiss(mainAlert.id)}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all duration-200"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => onDismiss(mainAlert.id)}
+                            className="ml-4 text-neutral-500 hover:text-neutral-700 transition-colors p-1"
+                        >
+                            <X />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const FundingTrackerApp = () => {
+            // Default data
+            const defaultWorkspace = useMemo(() => ({
+                id: 'default',
+                name: 'My Business',
+                clients: [],
+                created: new Date().toISOString(),
+                lastModified: new Date().toISOString()
+            }), []);
+
+            // Core state
+            const [clients, setClients] = useState([]);
+            const { notification, showNotification, hideNotification } = useNotification();
+
+            // UI state
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [editingClient, setEditingClient] = useState(null);
+            const [showAddClient, setShowAddClient] = useState(false);
+            const [dismissedSetupItems, setDismissedSetupItems] = useState([]);
+
+            // Get clients with metrics
+            const clientsWithMetrics = useClientMetrics(clients);
+
+            // Filter clients
+            const filteredClients = useMemo(() => {
+                return clientsWithMetrics.filter(client => 
+                    client.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }, [clientsWithMetrics, searchTerm]);
+
+            // Statistics
+            const stats = useMemo(() => ({
+                totalClients: clients.length,
+                lowFunds: filteredClients.filter(c => c.lowFundsAlert).length,
+                pastDue: filteredClients.filter(c => c.planPastDueAlert).length,
+                highWeeklyHours: filteredClients.filter(c => c.weeklyHoursTooHighAlert).length,
+                totalAmountRemaining: filteredClients.reduce((sum, c) => sum + (c.actualRemainingAmount || 0), 0),
+                totalHoursRemaining: filteredClients.reduce((sum, c) => sum + (c.remainingHours || 0), 0),
+                totalAmountSpent: filteredClients.reduce((sum, c) => sum + (c.amountSpent || 0), 0),
+                totalHoursWorked: filteredClients.reduce((sum, c) => sum + (c.hoursWorkedToDate || 0), 0)
+            }), [clients.length, filteredClients]);
+
+            // Setup Alerts
+            const setupAlerts = useMemo(() => {
+                const alerts = [];
+                
+                if (clients.length === 0) {
+                    alerts.push({
+                        id: 'no-clients',
+                        title: 'Welcome to Client Funding Tracker!',
+                        message: 'Get started by adding your first client. Track their funding, hours, and automatically calculate weekly work schedules to meet deadlines.',
+                        action: 'Add Your First Client',
+                        actionFn: () => setShowAddClient(true)
+                    });
+                }
+                
+                return alerts.filter(alert => !dismissedSetupItems.includes(alert.id));
+            }, [clients.length, dismissedSetupItems]);
+
+            // Client management
+            const updateClient = useCallback((clientId, updates) => {
+                setClients(prev => prev.map(client => 
+                    client.id === clientId ? { ...client, ...updates } : client
+                ));
+                setEditingClient(null);
+                showNotification('Client updated successfully!');
+            }, [showNotification]);
+
+            const addNewClient = useCallback(() => {
+                const newClient = {
+                    id: Date.now(),
+                    name: '',
+                    planEndDate: '',
+                    amountRemaining: 0,
+                    hourlyRate: CONSTANTS.DEFAULT_HOURLY_RATE,
+                    hoursWorkedToDate: 0
+                };
+                setClients(prev => [...prev, newClient]);
+                setEditingClient(newClient.id);
+                setShowAddClient(false);
+            }, []);
+
+            const deleteClient = useCallback((clientId) => {
+                const client = clients.find(c => c.id === clientId);
+                if (client && window.confirm(`Delete client "${client.name}"?`)) {
+                    setClients(prev => prev.filter(c => c.id !== clientId));
+                    setEditingClient(null);
+                    showNotification(`Client "${client.name}" deleted`);
+                }
+            }, [clients, showNotification]);
+
+            const addHours = useCallback((clientId, hours) => {
+                const client = clients.find(c => c.id === clientId);
+                if (!client) return;
+
+                const cost = hours * (client.hourlyRate || 0);
+                setClients(prev => prev.map(c => 
+                    c.id === clientId 
+                        ? { 
+                            ...c, 
+                            hoursWorkedToDate: (c.hoursWorkedToDate || 0) + hours,
+                            amountRemaining: Math.max(0, (c.amountRemaining || 0) - cost)
+                        }
+                        : c
+                ));
+                
+                showNotification(`Added ${hours}h to ${client.name}`);
+            }, [clients, showNotification]);
+
+            const addFunds = useCallback((clientId, amount) => {
+                const client = clients.find(c => c.id === clientId);
+                if (!client) return;
+
+                setClients(prev => prev.map(c => 
+                    c.id === clientId 
+                        ? { ...c, amountRemaining: (c.amountRemaining || 0) + amount }
+                        : c
+                ));
+                
+                showNotification(`Added $${amount.toLocaleString()} to ${client.name}`);
+            }, [clients, showNotification]);
+
+            const loadSampleData = useCallback(() => {
+                const sampleClients = [
+                    {
+                        id: Date.now() + 1,
+                        name: 'TechCorp Inc',
+                        planEndDate: '2025-09-15',
+                        amountRemaining: 15000,
+                        hourlyRate: 175,
+                        hoursWorkedToDate: 25
+                    },
+                    {
+                        id: Date.now() + 2,
+                        name: 'Marketing Solutions LLC',
+                        planEndDate: '2025-08-30',
+                        amountRemaining: 3200,
+                        hourlyRate: 150,
+                        hoursWorkedToDate: 40
+                    },
+                    {
+                        id: Date.now() + 3,
+                        name: 'Startup Dynamics',
+                        planEndDate: '2025-12-01',
+                        amountRemaining: 8500,
+                        hourlyRate: 200,
+                        hoursWorkedToDate: 15
+                    }
+                ];
+
+                setClients(sampleClients);
+                showNotification('Sample data loaded successfully');
+            }, [showNotification]);
+
+            const handleQuickSetup = useCallback(() => {
+                loadSampleData();
+                setDismissedSetupItems(['no-clients']);
+                showNotification('🚀 Quick setup complete! Sample data loaded with complete client configurations.');
+            }, [loadSampleData, showNotification]);
+
+            const dismissSetupAlert = useCallback((alertId) => {
+                setDismissedSetupItems(prev => [...prev, alertId]);
+            }, []);
+
+            // Simple Client Row for editing
+            const ClientRow = ({ client }) => {
+                const isEditing = editingClient === client.id;
+
+                if (isEditing) {
+                    return (
+                        <tr className="bg-blue-50">
+                            <td className="px-6 py-4">
+                                <input
+                                    type="text"
+                                    value={client.name || ''}
+                                    onChange={(e) => setClients(prev => prev.map(c => 
+                                        c.id === client.id ? { ...c, name: e.target.value } : c
+                                    ))}
+                                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Client name"
+                                    autoFocus
+                                />
+                            </td>
+                            <td className="px-6 py-4">
+                                <input
+                                    type="date"
+                                    value={client.planEndDate || ''}
+                                    onChange={(e) => setClients(prev => prev.map(c => 
+                                        c.id === client.id ? { ...c, planEndDate: e.target.value } : c
+                                    ))}
+                                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                                />
+                            </td>
+                            <td className="px-6 py-4">
+                                <input
+                                    type="number"
+                                    value={client.amountRemaining || ''}
+                                    onChange={(e) => setClients(prev => prev.map(c => 
+                                        c.id === client.id ? { ...c, amountRemaining: Number(e.target.value) || 0 } : c
+                                    ))}
+                                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                                    placeholder="0.00"
+                                />
+                            </td>
+                            <td className="px-6 py-4">
+                                <input
+                                    type="number"
+                                    value={client.hourlyRate || ''}
+                                    onChange={(e) => setClients(prev => prev.map(c => 
+                                        c.id === client.id ? { ...c, hourlyRate: Number(e.target.value) || 0 } : c
+                                    ))}
+                                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                                    placeholder="0.00"
+                                />
+                            </td>
+                            <td className="px-6 py-4">
+                                <button
+                                    onClick={() => setEditingClient(null)}
+                                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                                >
+                                    Save
+                                </button>
+                            </td>
+                        </tr>
+                    );
+                }
+
+                return (
+                    <tr className="border-b hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                            <div className="font-semibold text-neutral-900">{client.name || 'Unnamed Client'}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-neutral-600">
+                            {client.planEndDate ? new Date(client.planEndDate).toLocaleDateString() : 'Not set'}
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold ${
+                                client.lowFundsAlert 
+                                    ? 'status-critical' 
+                                    : (client.actualRemainingAmount || 0) > 5000 
+                                        ? 'status-healthy'
+                                        : 'status-warning'
+                            }`}>
+                                ${(client.actualRemainingAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-neutral-600">
+                            ${(client.hourlyRate || 0).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => setEditingClient(client.id)}
+                                    className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                                >
+                                    <Edit2 />
+                                </button>
+                                <button
+                                    onClick={() => addFunds(client.id, 1000)}
+                                    className="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700 transition-colors"
+                                >
+                                    +$1K
+                                </button>
+                                <button
+                                    onClick={() => addHours(client.id, 1)}
+                                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors"
+                                >
+                                    +1h
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-blue-50 to-neutral-100">
+                    <Notification notification={notification} onClose={hideNotification} />
+                    
+                    {/* Header */}
+                    <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-neutral-200">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center py-8">
+                                <div>
+                                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                                        Client Funding Tracker
+                                    </h1>
+                                    <p className="text-neutral-600 mt-2 font-medium">Professional client funding & resource management</p>
+                                </div>
+                                
+                                <div className="flex space-x-3">
+                                    <button
+                                        onClick={loadSampleData}
+                                        className="bg-neutral-600 text-white px-6 py-3 rounded-xl hover:bg-neutral-700 font-medium transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                                    >
+                                        📊 Load Sample Data
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddClient(true)}
+                                        className="btn-primary px-6 py-3 rounded-xl flex items-center font-medium"
+                                    >
+                                        <Plus /> <span className="ml-2">Add Client</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {/* Navigation Tabs */}
+                        <div className="mb-8">
+                            <nav className="flex space-x-2">
+                                {[
+                                    { id: 'dashboard', name: 'Dashboard', icon: Users },
+                                    { id: 'clients', name: 'Client Management', icon: Edit2 }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`flex items-center px-6 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                                            activeTab === tab.id
+                                                ? 'tab-active shadow-md'
+                                                : 'tab-inactive'
+                                        }`}
+                                    >
+                                        <tab.icon /> <span className="ml-2">{tab.name}</span>
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+
+                        {/* Dashboard Tab */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-8">
+                                {/* Setup Alerts */}
+                                {setupAlerts.length > 0 && (
+                                    <SetupAlert
+                                        alerts={setupAlerts}
+                                        onDismiss={dismissSetupAlert}
+                                        onQuickSetup={handleQuickSetup}
+                                    />
+                                )}
+
+                                {/* Stats Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <StatCard
+                                        icon={Users}
+                                        title="Total Clients"
+                                        value={stats.totalClients}
+                                        color="text-blue-600"
+                                    />
+                                    <StatCard
+                                        icon={DollarSign}
+                                        title="Budget Remaining"
+                                        value={`$${stats.totalAmountRemaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                        color="text-emerald-600"
+                                    />
+                                    <StatCard
+                                        icon={Clock}
+                                        title="Hours Remaining"
+                                        value={`${stats.totalHoursRemaining.toFixed(1)}h`}
+                                        color="text-indigo-600"
+                                    />
+                                    <StatCard
+                                        icon={DollarSign}
+                                        title="Revenue Earned"
+                                        value={`$${stats.totalAmountSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                        color="text-green-600"
+                                        subtitle={`${stats.totalHoursWorked}h completed`}
+                                    />
+                                </div>
+
+                                {/* Client Overview */}
+                                <div className="card rounded-2xl shadow-lg">
+                                    <div className="px-8 py-6 border-b border-neutral-200">
+                                        <h3 className="text-xl font-semibold text-neutral-900">Client Overview</h3>
+                                        <p className="text-neutral-600 mt-1">Quick view of your active clients</p>
+                                    </div>
+                                    <div className="p-8">
+                                        {filteredClients.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {filteredClients.slice(0, 6).map(client => (
+                                                    <div key={client.id} className="card card-hover rounded-xl p-6">
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <h4 className="font-semibold text-neutral-900 text-lg">{client.name || 'Unnamed Client'}</h4>
+                                                            {(client.lowFundsAlert || client.planEndAlert || client.planPastDueAlert || client.weeklyHoursTooHighAlert) && (
+                                                                <div className="text-amber-500 text-xl"><AlertTriangle /></div>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-2 text-sm text-neutral-600">
+                                                            <div className="flex justify-between">
+                                                                <span>Budget Left:</span>
+                                                                <span className="font-semibold text-emerald-600">${(client.actualRemainingAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span>Hours left:</span>
+                                                                <span className="font-medium">{client.remainingHours.toFixed(1)}h</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span>Progress:</span>
+                                                                <span className="font-medium">{client.progressPercentage.toFixed(0)}% done</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-16 text-neutral-500">
+                                                <div className="text-8xl mb-6 opacity-50">👥</div>
+                                                <h3 className="text-xl font-semibold text-neutral-700 mb-2">No clients yet</h3>
+                                                <p className="text-neutral-600 mb-6">Add your first client to get started with professional client management</p>
+                                                <button
+                                                    onClick={() => setShowAddClient(true)}
+                                                    className="btn-primary px-8 py-4 rounded-xl font-medium"
+                                                >
+                                                    Add Your First Client
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Clients Tab */}
+                        {activeTab === 'clients' && (
+                            <div className="space-y-6">
+                                {/* Search */}
+                                <div className="flex justify-between items-center">
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Search clients..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-4 pr-4 py-3 border border-neutral-300 rounded-xl w-80 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Client Table */}
+                                <div className="card rounded-2xl shadow-lg overflow-hidden">
+                                    {filteredClients.length > 0 ? (
+                                        <table className="min-w-full divide-y divide-neutral-200">
+                                            <thead className="bg-gradient-to-r from-neutral-50 to-blue-50">
+                                                <tr>
+                                                    <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                                                        Client Name
+                                                    </th>
+                                                    <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                                                        Plan End Date
+                                                    </th>
+                                                    <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                                                        Amount Remaining
+                                                    </th>
+                                                    <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                                                        Hourly Rate
+                                                    </th>
+                                                    <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                                                        Actions
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-neutral-100">
+                                                {filteredClients.map(client => (
+                                                    <ClientRow key={client.id} client={client} />
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="text-center py-16 text-neutral-500">
+                                            <div className="text-8xl mb-6 opacity-50">👥</div>
+                                            <h3 className="text-xl font-semibold text-neutral-700 mb-2">No clients found</h3>
+                                            <p className="text-neutral-600 mb-6">Add your first client to get started</p>
+                                            <button
+                                                onClick={() => setShowAddClient(true)}
+                                                className="btn-primary px-8 py-4 rounded-xl font-medium"
+                                            >
+                                                Add Your First Client
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Add Client Modal */}
+                    {showAddClient && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                            <div className="card rounded-2xl p-8 w-full max-w-md fade-in-up">
+                                <h3 className="text-xl font-semibold mb-6 text-neutral-900">Add New Client</h3>
+                                <div className="space-y-4">
+                                    <button
+                                        onClick={addNewClient}
+                                        className="btn-primary w-full py-4 rounded-xl font-medium text-lg"
+                                    >
+                                        Create Client
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddClient(false)}
+                                        className="w-full bg-neutral-200 text-neutral-700 py-4 rounded-xl hover:bg-neutral-300 font-medium transition-all duration-300"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(<FundingTrackerApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
